@@ -16,14 +16,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            EventManagerTheme() {
+            EventManagerTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     // Launch the LoginActivity when the app starts
-                    startActivity(Intent(this@MainActivity, _root_ide_package_.com.example.eventmanager.LoginActivity::class.java))
+                    startActivity(Intent(this@MainActivity, LoginActivity::class.java))
                     finish() // Close MainActivity so the user can't navigate back to it
                 }
             }
