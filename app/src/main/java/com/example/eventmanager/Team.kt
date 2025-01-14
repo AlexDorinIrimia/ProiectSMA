@@ -1,51 +1,41 @@
 package com.example.eventmanager
 
-class Team(val teamLeader: String) {
+data class Team(
+    val name: String, // Added team name
+    val teamLeader: User,
+    val members: MutableList<User> = mutableListOf()
+) {
 
-    companion object {
-        const val MAX_MEMBERS = 4
+    init {
+        // Automatically add the team leader as a member upon team creation
+        addMember(teamLeader)
     }
 
-    private val members: MutableList<String> = mutableListOf()
-
-    fun addMember(memberName: String): Boolean {
-        if (members.size < MAX_MEMBERS) {
-            members.add(memberName)
+    fun addMember(member: User): Boolean {
+        if (!members.contains(member)) {
+            members.add(member)
+            // Ensure the user also knows they are in this team
+            if (!member.teams.contains(this)) {
+                member.addTeam(this)
+            }
             return true
         }
         return false
     }
 
-
-    fun removeMember(memberName: String): Boolean {
-        return members.remove(memberName)
-    }
-
-    fun getMembers(): List<String> {
-        return members.toList() // Return a copy to prevent external modification
-    }
-
-    fun getMemberCount(): Int {
-        return members.size
-    }
-
-    fun isFull(): Boolean {
-        return members.size == MAX_MEMBERS
-    }
-
-    fun isEmpty(): Boolean {
-        return members.isEmpty()
-    }
-
-    fun getTeamLeader(): String {
-        return teamLeader
-    }
-
-    fun clearMembers() {
-        members.clear()
-    }
-
-    fun containsMember(memberName: String): Boolean {
-        return members.contains(memberName)
+    fun removeMember(member: User): Boolean {
+        // Prevent removing the team leader
+        if (member == teamLeader) {
+            return false
+        }
+        if (members.contains(member)) {
+            members.remove(member)
+            // Ensure the user also knows they are no longer in this team
+            if (member.teams.contains(this)) {
+                member.removeTeam(this)
+            }
+            return true
+        }
+        return false
     }
 }

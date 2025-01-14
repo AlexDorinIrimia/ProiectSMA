@@ -1,10 +1,12 @@
 package com.example.eventmanager
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,6 +27,8 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -42,6 +45,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,10 +54,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.eventmanager.ui.theme.EventManagerTheme
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDateTime
 
 class MainScreenActivity : ComponentActivity() {
@@ -70,22 +74,11 @@ class MainScreenActivity : ComponentActivity() {
 sealed class Screen {
     data object Events : Screen()
     data object AccountDetails : Screen()
-    data class EventDetails(val event: Event) : Screen()
+    data class EventDetails(val event: com.example.eventmanager.Events) : Screen()
     data object EditAccountDetails : Screen()
     data object AddEvent : Screen()
+    data class AddAnnouncement(val event: com.example.eventmanager.Events) : Screen()
 }
-
-data class Event(
-    val id: Int,
-    val name: String,
-    val description: String,
-    val startTime: LocalDateTime,
-    val endTime: LocalDateTime,
-    val location: String? = null,
-    val organizer: String? = null,
-    val maxAttendees: Int? = null,
-    val currentAttendees: Int = 0,
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("NewApi")
@@ -94,28 +87,51 @@ fun MainScreen() {
     var currentScreen: Screen by remember { mutableStateOf(Screen.Events) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var events by remember {
+    val user1 = User("Alice Smith", "alice@example.com", Uri.parse("content://..."))
+    val user2 = User("Bob Johnson", "bob@example.com")
+    val user3 = User("Charlie Brown", "charlie@example.com")
+
+    // Sample Teams
+    val teamA = Team("Team A",user1) // user1 is the team leader
+    teamA.addMember(user2)
+    val teamB = Team("Team B",user3)
+
+    // Sample Announcements
+    val announcement1 = Announcement("Welcome to the Tech Conference!")
+    val announcement2 = Announcement("Don't forget the Summer Music Festival!")
+
+    // Sample Current User
+    val currentUser = user1
+    val events by remember {
         mutableStateOf(
-            listOf(
-                Event(
-                    id = 1,
+            mutableListOf(
+                Events(
                     name = "Tech Conference 2024",
-                    description = "A conference for tech enthusiasts.",
+                    place = "Convention Center",
                     startTime = LocalDateTime.of(2024, 10, 26, 9, 0),
-                    endTime = LocalDateTime.of(2024, 10, 28, 17, 0),
-                    location = "Convention Center",
-                    maxAttendees = 500,
-                    currentAttendees = 250
+                    teams = mutableListOf(teamA),
+                    announcements = mutableListOf(announcement1)
                 ),
-                Event(
-                    id = 2,
+                Events(
                     name = "Summer Music Festival",
-                    description = "A fun music festival in the park.",
+                    place = "Central Park",
                     startTime = LocalDateTime.of(2024, 7, 15, 12, 0),
-                    endTime = LocalDateTime.of(2024, 7, 15, 22, 0),
-                    location = "Central Park",
-                    organizer = "Music Lovers Inc.",
-                    currentAttendees = 100
+                    teams = mutableListOf(teamB),
+                    announcements = mutableListOf(announcement2)
+                ),
+                Events(
+                    name = "Weekly Meeting",
+                    place = "Office",
+                    startTime = LocalDateTime.of(2024, 1, 15, 9, 0),
+                    recurrence = Recurrence.Weekly(DayOfWeek.MONDAY),
+                    teams = mutableListOf(teamA, teamB)
+                ),
+                Events(
+                    name = "Monthly Review",
+                    place = "Boardroom",
+                    startTime = LocalDateTime.of(2024, 1, 1, 10, 0),
+                    recurrence = Recurrence.Monthly(1),
+                    teams = mutableListOf(teamA)
                 )
             )
         )
@@ -150,6 +166,7 @@ fun MainScreen() {
                                 is Screen.EventDetails -> "Event Details"
                                 is Screen.EditAccountDetails -> "Edit Account Details"
                                 is Screen.AddEvent -> "Add Event"
+                                is Screen.AddAnnouncement -> "Add Announcement"
                             },
                             color = Color.White
                         )
@@ -185,6 +202,13 @@ fun MainScreen() {
                                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                                 }
                             }
+
+                            is Screen.AddAnnouncement -> {
+                                val addAnnouncementScreen = currentScreen as Screen.AddAnnouncement
+                                IconButton(onClick = { currentScreen = Screen.EventDetails(addAnnouncementScreen.event) }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                }
+                            }
                         }
                     },
                     actions = {
@@ -210,22 +234,42 @@ fun MainScreen() {
                         }
                     )
 
+                    is Screen.EventDetails -> {
+                        val eventDetailsScreen = currentScreen as Screen.EventDetails
+                        EventDetailsScreen(
+                            event = eventDetailsScreen.event,
+                            modifier = Modifier.padding(innerPadding),
+                            onAddAnnouncementClick = { event ->
+                                currentScreen = Screen.AddAnnouncement(event)
+                            }
+                        )
+                    }
+                    is Screen.AddAnnouncement -> {
+                        val addAnnouncementScreen = currentScreen as Screen.AddAnnouncement
+                        AddAnnouncementScreen(
+                            event = addAnnouncementScreen.event,
+                            onAnnouncementAdded = {
+                                // Handle the new announcement if needed
+                                // For example, you might want to refresh the event details screen
+                                currentScreen = Screen.EventDetails(addAnnouncementScreen.event)
+                            },
+                            onBack = {
+                                currentScreen = Screen.EventDetails(addAnnouncementScreen.event)
+                            }
+                        )
+                    }
+
                     is Screen.AccountDetails -> AccountDetails(
                         onEditAccountClick = { currentScreen = Screen.EditAccountDetails }
                     )
 
-                    is Screen.EventDetails -> EventDetailsScreen(
-                        event = (currentScreen as Screen.EventDetails).event
-                    )
+                    is Screen.AddEvent -> AddEventScreen(onEventAdded = { newEvent: Events ->
+                        events.add(newEvent)
+                        currentScreen = Screen.Events
+                    })
 
-                    is Screen.EditAccountDetails -> EditAccountDetails()
-                    is Screen.AddEvent -> AddEventScreen(
-                        onEventAdded = { newEvent ->
-                            events = events + newEvent
-                            currentScreen = Screen.Events
-                        },
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    is Screen.EditAccountDetails -> EditAccountDetails(
+                        onSave = { currentScreen = Screen.AccountDetails })
                 }
             }
         )
@@ -234,12 +278,13 @@ fun MainScreen() {
 
 @SuppressLint("NewApi")
 @Composable
-fun AddEventScreen(onEventAdded: (Event) -> Unit, modifier: Modifier = Modifier) {
+fun AddEventScreen(onEventAdded: (Events) -> Unit, modifier: Modifier = Modifier) {
     var name by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    var organizer by remember { mutableStateOf("") }
-    var maxAttendees by remember { mutableStateOf("") }
+    var selectedDayOfWeek by remember { mutableStateOf<DayOfWeek?>(null) }
+    var selectedDayOfMonth by remember { mutableIntStateOf(1) }
+    var isWeeklySelected by remember { mutableStateOf(false) }
+    var isMonthlySelected by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -262,14 +307,6 @@ fun AddEventScreen(onEventAdded: (Event) -> Unit, modifier: Modifier = Modifier)
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
-            value = description,
-            onValueChange = { description = it },
-            label = { Text("Description") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
             value = location,
             onValueChange = { location = it },
             label = { Text("Location") },
@@ -277,36 +314,79 @@ fun AddEventScreen(onEventAdded: (Event) -> Unit, modifier: Modifier = Modifier)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
-            value = organizer,
-            onValueChange = { organizer = it },
-            label = { Text("Organizer") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        Text(text = "Recurrence:")
+
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
-            value = maxAttendees,
-            onValueChange = { maxAttendees = it },
-            label = { Text("Max Attendees") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = isWeeklySelected,
+                onCheckedChange = { isChecked ->
+                    isWeeklySelected = isChecked
+                    if (isChecked) {
+                        isMonthlySelected = false
+                    }
+                }
+            )
+            Text("Weekly")
+        }
+
+        if (isWeeklySelected) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                DayOfWeek.values().forEach { day ->
+                    Button(onClick = { selectedDayOfWeek = day }) {
+                        Text(day.name.take(3))
+                    }
+                }
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = isMonthlySelected,
+                onCheckedChange = { isChecked ->
+                    isMonthlySelected = isChecked
+                    if (isChecked) {
+                        isWeeklySelected = false
+                    }
+                }
+            )
+            Text("Monthly")
+        }
+        if (isMonthlySelected) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                (1..31).forEach { day ->
+                    Button(onClick = { selectedDayOfMonth = day }) {
+                        Text(day.toString())
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
-                val newEvent = Event(
-                    id = (System.currentTimeMillis() % 10000).toInt(), // Simple ID generation
+                val newEvent = Events(
                     name = name,
-                    description = description,
-                    startTime = LocalDateTime.now(), // You might want to add a date/time picker
-                    endTime = LocalDateTime.now().plusHours(2), // Default end time 2 hours later
-                    location = location.ifEmpty { null },
-                    organizer = organizer.ifEmpty { null },
-                    maxAttendees = maxAttendees.toIntOrNull(),
-                    currentAttendees = 0
+                    place = location,
+                    startTime = LocalDateTime.now(),
+                    recurrence = when {
+                        isWeeklySelected && selectedDayOfWeek != null -> Recurrence.Weekly(selectedDayOfWeek!!)
+                        isMonthlySelected -> Recurrence.Monthly(selectedDayOfMonth)
+                        else -> null
+                    },
+                    teams = mutableListOf(),
+                    users = mutableListOf(),
+                    announcements = mutableListOf()
                 )
+
                 onEventAdded(newEvent)
             },
             modifier = Modifier.fillMaxWidth()
@@ -317,39 +397,109 @@ fun AddEventScreen(onEventAdded: (Event) -> Unit, modifier: Modifier = Modifier)
 }
 
 @Composable
-fun EventDetailsScreen(event: Event) {
+fun AddAnnouncementScreen(event: Events, onAnnouncementAdded: () -> Unit, onBack: () -> Unit) {
+    var announcementText by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
-        Text(text = event.name, style = MaterialTheme.typography.headlineLarge)
+        Text(
+            text = "Add Announcement for ${event.name}",
+            style = MaterialTheme.typography.headlineMedium
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = announcementText,
+            onValueChange = { announcementText = it },
+            label = { Text("Announcement") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                if (announcementText.isNotBlank()) {
+                    val newAnnouncement = Announcement(announcementText)
+                    event.announcements.add(newAnnouncement)
+                    onAnnouncementAdded()
+                    announcementText = "" // Clear the text field
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Add Announcement")
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(text = "Description:", style = MaterialTheme.typography.headlineSmall)
-        Text(text = event.description)
+        Button(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Back")
+        }
+    }
+}
+@Composable
+fun EventDetailsScreen(
+    event: Events,
+    modifier: Modifier = Modifier,
+    onAddAnnouncementClick: (Events) -> Unit,
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        Text(text = "Event Name: ${event.name}")
+        Text(text = "Place: ${event.place}")
+        Text(text = "Start Time: ${event.startTime}")
+        Text(text = "Recurrence: ${event.recurrence}")
+        Text(text = "Teams:", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        Column {
+            event.teams.forEach { team ->
+                Text(text = "Team: ${team.name}", fontWeight = FontWeight.Bold) // Display team name
+                Text(text = "Team Leader: ${team.teamLeader.fullName}")
+                team.members.forEach { member ->
+                    if (member != team.teamLeader) {
+                        Text(text = "- ${member.fullName}")
+                    }
+                }
+            }
+        }
+
+
+        // Add Announcement Button (only for team leaders)
+        val currentUser = User("testuser", "test@example.com") // Replace with your current user
+        if (currentUser.isTeamLeaderForEvent(event)) {
+            Button(onClick = { onAddAnnouncementClick(event) }) {
+                Text("Add Announcement")
+            }
+        }
+
+        // Display Announcements
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(text = "Announcements:", fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (event.location != null) {
-            Text(text = "Location:", style = MaterialTheme.typography.headlineSmall)
-            Text(text = event.location)
-            Spacer(modifier = Modifier.height(8.dp))
+        LazyColumn {
+            items(event.announcements) { announcement ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = announcement.announcement)
+                    }
+                }
+            }
         }
-
-        if (event.organizer != null) {
-            Text(text = "Organizer:", style = MaterialTheme.typography.headlineSmall)
-            Text(text = event.organizer)
-            Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = { onAddAnnouncementClick(event) }) {
+            Icon(Icons.Filled.Add, contentDescription = "Add Announcement")
+            Text("Add Announcement")
         }
-
-        if (event.maxAttendees != null) {
-            Text(text = "Max Attendees:", style = MaterialTheme.typography.headlineSmall)
-            Text(text = event.maxAttendees.toString())
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        Text(text = "Current Attendees:", style = MaterialTheme.typography.headlineSmall)
-        Text(text = event.currentAttendees.toString())
     }
 }
 
@@ -430,7 +580,7 @@ fun DrawerContent(onItemClick: (String) -> Unit) {
 }
 
 @Composable
-fun EventList(events: List<Event>, onEventClick: (Event) -> Unit) {
+fun EventList(events: List<Events>, onEventClick: (Events) -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(64.dp)
@@ -443,7 +593,7 @@ fun EventList(events: List<Event>, onEventClick: (Event) -> Unit) {
 
 @SuppressLint("NewApi")
 @Composable
-fun EventItem(event: Event, onEventClick: (Event) -> Unit) {
+fun EventItem(event: Events, onEventClick: (Events) -> Unit) {
     Button(
         onClick = { onEventClick(event) },
         modifier = Modifier
