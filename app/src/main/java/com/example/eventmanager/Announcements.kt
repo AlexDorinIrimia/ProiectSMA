@@ -10,7 +10,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
-class Announcement(val announcement: String) {
+class Announcement(val announcementData: AnnouncementData) {
+
 
     companion object {
         // Unique ID for the notification channel
@@ -26,8 +27,8 @@ class Announcement(val announcement: String) {
         // Build the notification
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification) // Replace with your notification icon
-            .setContentTitle("New Announcement")
-            .setContentText(announcement)
+            .setContentTitle(announcementData.title)
+            .setContentText(announcementData.description)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
         // Show the notification

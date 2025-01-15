@@ -1,7 +1,9 @@
 package com.example.eventmanager
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.os.Parcelable
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,11 +36,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.startActivity
 import com.example.eventmanager.ui.theme.EventManagerTheme
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UserDatabase.loadUsers(this)
         setContent {
             EventManagerTheme {
                 LoginScreen()
@@ -47,6 +51,16 @@ class LoginActivity : ComponentActivity() {
     }
 }
 
+fun Intent.putExtra(key: String, user: User) {
+    // Check the Android version for compatibility
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        // Use the new putExtra method for Android 13 (Tiramisu) and above
+        putExtra(key, user as Parcelable)
+    } else {
+        // Use the old putExtra method for older Android versions
+        putExtra(key, user)
+    }
+}
 
 @Composable
 fun LoginScreen() {
@@ -91,11 +105,21 @@ fun LoginScreen() {
 
             Button(
                 onClick = {
-                    // In a real app, you would authenticate with a backend here
-                    if (username == "testuser" && password == "password") {
-                        Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                        val intent = Intent(context, MainScreenActivity::class.java)
-                        context.startActivity(intent)
+                    val user = UserDatabase.findUserByUsername(username)
+                    if (user != null) {
+                        // In a real app, you would hash and compare passwords
+                        // For this example, we're just checking if the password is not empty
+                        if (password.isNotEmpty()) {
+                            Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
+                            val intent = Intent(context, MainScreenActivity::class.java)
+                            intent.putExtra("userFullName", user.fullName)
+                            intent.putExtra("userProfilePhoto", user.profilePhoto)
+                            intent.putExtra("userUsername", user.username)
+                            intent.putExtra("userId", user.id)
+                            context.startActivity(intent)
+                        } else {
+                            Toast.makeText(context, "Login Failed!", Toast.LENGTH_SHORT).show()
+                        }
                     } else {
                         Toast.makeText(context, "Login Failed!", Toast.LENGTH_SHORT).show()
                     }
@@ -109,7 +133,6 @@ fun LoginScreen() {
                 text = AnnotatedString("Don't have an account? Register here"),
                 onClick = {
                     // Navigate to the registration screen
-                    Toast.makeText(context, "Register", Toast.LENGTH_SHORT).show()
                     val intent = Intent(context, RegisterActivity::class.java)
                     context.startActivity(intent)
                 },

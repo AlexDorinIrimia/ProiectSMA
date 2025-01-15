@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("kotlin-parcelize")
 }
 
 android {
@@ -37,6 +38,12 @@ android {
     buildFeatures {
         compose = true
     }
+    packagingOptions {
+        resources {
+            // Exclude the conflicting file pattern
+            exclude("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
+        }
+    }
 }
 
 dependencies {
@@ -53,6 +60,7 @@ dependencies {
     implementation(libs.androidx.runtime.saved.instance.state)
     implementation(libs.firebase.crashlytics.buildtools)
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation(libs.identity.jvm)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

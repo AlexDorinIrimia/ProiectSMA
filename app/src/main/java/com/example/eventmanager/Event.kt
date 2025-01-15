@@ -1,29 +1,30 @@
 package com.example.eventmanager
 
 import android.annotation.SuppressLint
-import android.content.Context
+import com.google.gson.Gson
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonParseException
+import java.lang.reflect.Type
 import java.time.DayOfWeek
 import java.time.LocalDateTime
 import java.time.temporal.TemporalAdjusters
 
-
 class Events(
+    val id: String,
     val name: String,
     val place: String,
     val startTime: LocalDateTime,
     val recurrence: Recurrence? = null,
+    val announcements: MutableList<Announcement> = ArrayList(),
     val teams: MutableList<Team> = mutableListOf(),
     val users: MutableList<User> = mutableListOf(),
-    val announcements: MutableList<Announcement> = mutableListOf(),
+    val joinRequests: MutableList<User> = mutableListOf()
 ) {
-
-    private val teamDeadlines: MutableMap<String, LocalDateTime> = mutableMapOf()
-
     fun addTeam(team: Team): Boolean {
         if (!teams.contains(team)) {
             teams.add(team)
-            // Ensure all team members are also added as users to the event
-            team.members.forEach { addUser(it) }
             return true
         }
         return false
@@ -32,70 +33,9 @@ class Events(
     fun removeTeam(team: Team): Boolean {
         if (teams.contains(team)) {
             teams.remove(team)
-            // Remove team deadlines
-            teamDeadlines.remove(team.teamLeader.fullName)
             return true
         }
         return false
-    }
-
-    fun addUser(user: User): Boolean {
-        if (!users.contains(user)) {
-            users.add(user)
-            // Ensure the user also knows they are in this event
-            if (!user.events.contains(this)) {
-                user.addEvent(this)
-            }
-            return true
-        }
-        return false
-    }
-
-    fun removeUser(user: User): Boolean {
-        if (users.contains(user)) {
-            users.remove(user)
-            // Ensure the user also knows they are no longer in this event
-            if (user.events.contains(this)) {
-                user.removeEvent(this)
-            }
-            return true
-        }
-        return false
-    }
-
-    fun addAnnouncement(announcement: Announcement, context: Context): Boolean {
-        if (!announcements.contains(announcement)) {
-            announcements.add(announcement)
-            // Send the notification
-            announcement.sendNotification(context)
-            return true
-        }
-        return false
-    }
-
-    fun removeAnnouncement(announcement: Announcement): Boolean {
-        if (announcements.contains(announcement)) {
-            announcements.remove(announcement)
-            return true
-        }
-        return false
-    }
-
-    @SuppressLint("NewApi")
-    fun setTeamDeadline(teamLeader: User, deadline: LocalDateTime): Boolean {
-        if (teams.any { it.teamLeader == teamLeader }) {
-            teamDeadlines[teamLeader.fullName] = deadline
-            return true
-        }
-        return false
-    }
-
-    fun getTeamDeadline(teamLeader: User): LocalDateTime? {
-        return teamDeadlines[teamLeader.fullName]
-    }
-
-    fun getAllTeamDeadlines(): Map<String, LocalDateTime> {
-        return teamDeadlines.toMap()
     }
 
     @SuppressLint("NewApi")
@@ -109,7 +49,6 @@ class Events(
                     nextOccurrence.plusWeeks(1)
                 }
             }
-
             is Recurrence.Monthly -> {
                 val nextOccurrence = startTime.withDayOfMonth(recurrence.dayOfMonth)
                 if (nextOccurrence.isAfter(after)) {
@@ -118,13 +57,47 @@ class Events(
                     nextOccurrence.plusMonths(1)
                 }
             }
-
             else -> null
         }
     }
+
+    fun copy(announcements: List<Any?>): Events {
+    return Events(
+        id = id,
+        name = name,
+        place = place,
+        startTime = startTime,
+        recurrence = recurrence,
+    )
+    }
+
 }
 
 sealed class Recurrence {
     data class Weekly(val dayOfWeek: DayOfWeek) : Recurrence()
     data class Monthly(val dayOfMonth: Int) : Recurrence()
+}
+
+// Custom JsonDeserializer for Recurrence
+class RecurrenceDeserializer : JsonDeserializer<Recurrence> {
+    override fun deserialize(
+        json: JsonElement,
+        typeOfT: Type,
+        context: JsonDeserializationContext
+    ): Recurrence {
+        val jsonObject = json.asJsonObject
+        val type = jsonObject.get("type").asString
+
+        return when (type) {
+            "weekly" -> {
+                val dayOfWeek = DayOfWeek.valueOf(jsonObject.get("dayOfWeek").asString)
+                Recurrence.Weekly(dayOfWeek)
+            }
+            "monthly" -> {
+                val dayOfMonth = jsonObject.get("dayOfMonth").asInt
+                Recurrence.Monthly(dayOfMonth)
+            }
+            else -> throw JsonParseException("Unknown recurrence type: $type")
+        }
+    }
 }

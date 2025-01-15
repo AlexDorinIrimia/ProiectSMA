@@ -1,15 +1,16 @@
 package com.example.eventmanager
 
-import android.net.Uri
-
+import java.io.Serializable
 
 data class User(
     val fullName: String,
-    val email: String,
-    val profilePhoto: Uri? = null,
+    val profilePhoto: String? = null,
+    val events: MutableList<Events> = mutableListOf(),
     val teams: MutableList<Team> = mutableListOf(),
-    val events: MutableList<Events> = mutableListOf()
+    val username: String,
+    val id: String
 ) {
+
     fun isTeamLeaderForEvent(event: Events): Boolean {
         return event.teams.any { it.teamLeader == this }
     }
@@ -43,5 +44,8 @@ data class User(
             return true
         }
         return false
+    }
+    fun isInEvent(event: Events): Boolean {
+        return event.users.contains(this)
     }
 }
